@@ -1,0 +1,29 @@
+{
+  "grupo": "G01",
+  "seed_base": 9,
+  "seed_final": 1009,
+  "numero_semanas": 12,
+  "caixa_inicial": 24168.04,
+  "dividas": {
+    "semana_4": 54546.73,
+    "semana_8": 70456.2,
+    "semana_12": 102275.12
+  },
+  "variabilidade": {
+    "sigma_demanda": 0.0921,
+    "sigma_preco_concorrente": 0.0435,
+    "sigma_custo_logistico": 0.1453
+  },
+  "orcamento_promocional_semanal": 6928.92,
+  "niveis_preco_relativos": [
+    0.82,
+    0.88,
+    0.94,
+    1.0,
+    1.06,
+    1.12
+  ],
+  "n_simulacoes_recomendadas": 2000,
+  "limite_risco_falha": 0.1,
+  "observacao": "As variabilidades são parâmetros de dispersão relativos. A modelagem probabilística deve ser explicada pelos alunos."
+}
