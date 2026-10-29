@@ -8,9 +8,9 @@ class LeitorCsv:
         """Inicializando a instância do objeto caminho."""
         self.caminho = caminho
 
-    def leitura(self) -> pd.DataFrame:
+    def leitura(self, seed: int = 9) -> pd.DataFrame:
         """Carregando o CSV e retornando 6 dados aleatórios do DataFrame."""
-        return pd.read_csv(self.caminho).sample(6)
+        return pd.read_csv(self.caminho).sample(n=6, random_state=seed)
 
 class PrecificadorSKU:
     """
@@ -87,9 +87,9 @@ class BruteForce:
 
                 caixa_atual += caixa_sku
 
-        if viavel and caixa_atual > melhor_caixa:
-            melhor_caixa = caixa_atual
-            melhor_combinacao = combinacao_precos
+            if viavel and caixa_atual > melhor_caixa:
+                melhor_caixa = caixa_atual
+                melhor_combinacao = combinacao_precos
         return melhor_combinacao, melhor_caixa
 
 class AvaliadorMeta:
