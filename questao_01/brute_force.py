@@ -51,7 +51,48 @@ class PrecificadorSKU:
         return qtd_vendida * caixa_unitario
 
 class BruteForce:
-    """TODO"""
+    """
+        Executando o algoritmo Brute Force sobre todas as
+        combinações permitidas de preço em um subconjunto 
+        com 6 produtos.
+    """
+    def __init__(self, precificador: PrecificadorSKU):
+        self.precificador = precificador
+
+    def testeCombinacoes(self, subconjunto: pd.DataFrame, precos_permitidos: dict):
+        """
+            Testa todas as cobinações de preços e
+            retorna a melhor cixa e combinação.
+        """
+        skus = subconjunto["sku"].to_list()
+        precos = [precos_permitidos[sku] for sku in skus]
+
+        melhor_caixa = -float("inf")
+        melhor_combinacao = None
+
+        # testando todas as combinações possíveis
+        for combinacao_precos in itertools.product(*precos):
+            caixa_atual = 0
+            viavel = True
+
+            for i, sku in enumerate(skus):
+                preco_escolhido = combinacao_precos[i]
+                row = subconjunto.loc[subconjunto["sku"] == sku].iloc[0]
+
+                caixa_sku = self.precificador.calcular_caixa_produto(preco_escolhido, row)
+
+                if caixa_sku == -float("inf"):
+                    viavel = False
+                    break
+
+                caixa_atual += caixa_sku
+
+        if viavel and caixa_atual > melhor_caixa:
+            melhor_caixa = caixa_atual
+            melhor_combinacao = combinacao_precos
+        return melhor_combinacao, melhor_caixa
+
+
 
             
     
