@@ -92,8 +92,25 @@ class BruteForce:
             melhor_combinacao = combinacao_precos
         return melhor_combinacao, melhor_caixa
 
+class AvaliadorMeta:
+    """Comparando o resultado gerado com a meta de caixa."""
+    def __init__(self, meta_caixa: float = 331680.98):
+        self.meta_caixa = meta_caixa
 
-
+    def avaliar(self, caixa_gerado: float) -> dict:
+        diferenca = caixa_gerado - self.meta_caixa
+        meta_atingida = caixa_gerado >= self.meta_caixa
+        return {
+            "caixa_gerado": caixa_gerado,
+            "meta_caixa": self.meta_caixa,
+            "meta_atingida": meta_atingida,
+            "diferenca": diferenca,
+            "status": (
+                "META ATINGIDA (SUPERÁVIT)"
+                if meta_atingida
+                else "META NÃO ATINGIDA (DÉFICIT)"
+            ),
+        }
             
     
 
