@@ -63,8 +63,8 @@
         "geracao_melhor": 92,
         "geracoes_executadas": 100,
         "caixa": 466012.2941335699,
-        "tempo_s": 0.03310338099998944,
-        "memoria_mb": 0.0905609130859375
+        "tempo_s": 0.05868489999556914,
+        "memoria_mb": 0.09073638916015625
       },
       {
         "config": "B",
@@ -74,8 +74,8 @@
         "geracao_melhor": 71,
         "geracoes_executadas": 131,
         "caixa": 466047.3731937554,
-        "tempo_s": 0.04576294600002484,
-        "memoria_mb": 0.1622915267944336
+        "tempo_s": 0.04499569995095953,
+        "memoria_mb": 0.1622304916381836
       }
     ],
     "config_escolhida": "B",
@@ -89,7 +89,7 @@
     "orcamento_restante": 69030.11914127515,
     "ganho_liquido_total": 15107.479070501111,
     "skus_beneficiados": 15,
-    "tempo_s": 0.0016863719999946625,
+    "tempo_s": 0.0030592000111937523,
     "memoria_pico_mb": 0.011316299438476562
   },
   "resultado_final": {
@@ -108,9 +108,9 @@
   },
   "otimizacao_codigo": {
     "avaliacoes": 300,
-    "tempo_antes_s": 0.6498045920000095,
-    "tempo_depois_s": 0.0018410019999919314,
-    "speedup": 352.9624584888324,
+    "tempo_antes_s": 0.5095404000021517,
+    "tempo_depois_s": 0.001677699969150126,
+    "speedup": 303.71366118595694,
     "resultados_iguais": true
   }
 }

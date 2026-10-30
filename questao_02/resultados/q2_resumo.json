@@ -37,20 +37,20 @@
   },
   "desempenho": {
     "monte_carlo_estimacao": {
-      "tempo_s": 0.1791241749999699,
-      "memoria_pico_mb": 33.57211780548096
+      "tempo_s": 0.21817690000170842,
+      "memoria_pico_mb": 33.57233715057373
     },
     "programacao_dinamica": {
-      "tempo_s": 0.32332892299996274,
-      "memoria_pico_mb": 30.659263610839844
+      "tempo_s": 0.31050190003588796,
+      "memoria_pico_mb": 30.657958030700684
     },
     "greedy": {
-      "tempo_s": 0.017322202000002562,
-      "memoria_pico_mb": 0.01763153076171875
+      "tempo_s": 0.014984500012360513,
+      "memoria_pico_mb": 0.0176239013671875
     },
     "monte_carlo_validacao": {
-      "tempo_s": 0.1686088179999956,
-      "memoria_pico_mb": 20.03567409515381
+      "tempo_s": 0.17692330002319068,
+      "memoria_pico_mb": 20.03568935394287
     }
   },
   "validacao": {
