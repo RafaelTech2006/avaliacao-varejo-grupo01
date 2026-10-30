@@ -1,79 +1,54 @@
-import pandas as pd
+"""Etapa C — Greedy semanal: aloca destaques/mídia/frete promocional (recurso escasso) a cada semana.
 
-def _obter_coluna(row, chaves_possiveis, padrao=0.0):
-    """Função auxiliar para buscar colunas tolerando variações de nome no CSV."""
-    for chave in chaves_possiveis:
-        if chave in row:
-            val = row[chave]
-            if pd.notna(val):
-                return val
-    return padrao
+Para cada semana w (em ordem), usando o plano de preços da DP e o estoque esperado do SKU:
+    ganho(i,w)  = ( E[min(D*(1+u), s)] - E[min(D, s)] ) * margem_média  -  custo_destaque(i,w)
+    razão(i,w)  = ganho / custo_destaque     (benefício líquido por real investido)
+Ordena por razão decrescente e concede destaques enquanto couber no orçamento semanal e ganho > 0.
+O estoque esperado é atualizado semana a semana (um destaque faz o estoque girar mais rápido).
+Tempo O(W * N log N); memória O(N).
+"""
+from __future__ import annotations
 
-def alocar_promocoes_greedy(df_catalogo, plano_precos_dp, orcamento_semanal=500.0, n_semanas=12):
-    """
-    Algoritmo Greedy Semanal: Aloca um limite de orçamento promocional para os produtos
-    com maior retorno/benefício marginal por real gasto.
-    """
-    plano_ajustado = {}
-    for _, row in df_catalogo.iterrows():
-        sku = _obter_coluna(row, ['sku', 'SKU', 'id_produto'], 'SKU_DESCONHECIDO')
-        if sku in plano_precos_dp:
-            trajetoria = list(plano_precos_dp[sku])
-        else:
-            trajetoria = []
-            
-        # Garante exatamente 12 semanas (preenchendo com o último valor ou 1.0 se faltar)
-        if len(trajetoria) < n_semanas:
-            ultimo_val = trajetoria[-1] if trajetoria else 1.0
-            trajetoria.extend([ultimo_val] * (n_semanas - len(trajetoria)))
-        elif len(trajetoria) > n_semanas:
-            trajetoria = trajetoria[:n_semanas]
-            
-        plano_ajustado[sku] = trajetoria
+import numpy as np
 
-    registro_alocacoes = []
+from questao_02.modelo import Instancia, custo_promo
+from questao_02.monte_carlo import Estatisticas, PlanoCompleto
 
-    for sem in range(n_semanas):
-        candidatos = []
-        for idx, row in df_catalogo.iterrows():
-            sku = _obter_coluna(row, ['sku', 'SKU', 'id_produto'], f'SKU_{idx}')
-            mult_atual = plano_ajustado[sku][sem]
-            
-            preco_base = _obter_coluna(row, ['preco_atual', 'preco atual'], 100.0)
-            custo_unit = _obter_coluna(row, ['custo_unitario', 'custo unitario'], 50.0)
-            demanda_90d = _obter_coluna(row, ['demanda_base_90d', 'demanda base 90d', 'demanda_base'], 300.0)
-            
-            # Custo de aplicar destaque/frete promocional
-            custo_promo = preco_base * 0.05
-            
-            # Ganho marginal estimado na demanda (+15% de incremento na demanda com a promoção)
-            incremento_caixa = (preco_base * mult_atual - custo_unit) * (demanda_90d / 12.0) * 0.15
-            
-            roi_marginal = incremento_caixa / custo_promo if custo_promo > 0 else 0
-            
-            candidatos.append({
-                'sku': sku,
-                'custo': custo_promo,
-                'ganho': incremento_caixa,
-                'roi': roi_marginal,
-                'mult_atual': mult_atual
-            })
-        
-        # Ordenação gulosa pelo maior ROI marginal
-        candidatos.sort(key=lambda x: x['roi'], reverse=True)
-        
-        orcamento_restante = orcamento_semanal
-        for c in candidatos:
-            if c['custo'] <= orcamento_restante and c['roi'] > 1.0:
-                orcamento_restante -= c['custo']
-                sku_atual = c['sku']
-                plano_ajustado[sku_atual][sem] = round(c['mult_atual'] * 0.95, 2)
-                
-                registro_alocacoes.append({
-                    'semana': sem + 1,
-                    'sku': sku_atual,
-                    'investimento': c['custo'],
-                    'roi_estimado': c['roi']
-                })
 
-    return plano_ajustado, pd.DataFrame(registro_alocacoes)
+def vendas_esperadas(pmf: np.ndarray, s: int) -> float:
+    """E[min(D, s)] a partir da pmf de demanda inteira."""
+    s = int(min(s, len(pmf) - 1))
+    return float((np.arange(s) * pmf[:s]).sum() + s * pmf[s:].sum())
+
+
+def alocar(inst: Instancia, est: Estatisticas, nivel_idx: np.ndarray, estoque_ini: np.ndarray | None = None,
+           custo_pct: float = 0.05, orcamento_semanal: float | None = None) -> tuple[PlanoCompleto, list]:
+    W, N = inst.n_semanas, inst.n
+    orc = inst.orcamento_semanal if orcamento_semanal is None else orcamento_semanal
+    estoque = inst.estoque0.astype(float).copy() if estoque_ini is None else estoque_ini.astype(float).copy()
+    destaque = np.zeros((N, W), dtype=bool)
+    custos = np.zeros((N, W))
+    registro = []
+    for w in range(W):
+        m = nivel_idx[:, w]
+        custo = custo_promo(inst, m, custo_pct)
+        ganho = np.zeros(N)
+        e_base = np.zeros(N)
+        e_prom = np.zeros(N)
+        for i in range(N):
+            e_base[i] = vendas_esperadas(est.pmf[0, w, i, m[i]], estoque[i])
+            e_prom[i] = vendas_esperadas(est.pmf[1, w, i, m[i]], estoque[i])
+            ganho[i] = (e_prom[i] - e_base[i]) * est.media_margem[w, i, m[i]] - custo[i]
+        razao = np.where(custo > 0, ganho / custo, -np.inf)
+        restante = orc
+        for i in np.argsort(-razao):                       # ordenação gulosa por benefício/real
+            if ganho[i] <= 0:
+                break
+            if custo[i] <= restante:
+                restante -= custo[i]
+                destaque[i, w] = True
+                registro.append({"semana": w + 1, "sku": inst.skus[i], "custo": float(custo[i]),
+                                 "ganho_liquido_esperado": float(ganho[i]), "razao": float(razao[i])})
+        custos[:, w] = custo
+        estoque = np.maximum(0.0, estoque - np.rint(np.where(destaque[:, w], e_prom, e_base)))
+    return PlanoCompleto(nivel_idx=nivel_idx, destaque=destaque, custo_destaque=custos), registro
