@@ -5,7 +5,7 @@
 | Integrante | RM |
 |---|---|
 | Rafael Tavares Santos | 563487 |
-| Gabriel Oliveira Alaral | 563872 |
+| Gabriel Oliveira Amaral | 563872 |
 | Felipe Yamaguchi Mesquita | 556170 |
 
 - **Seed base:** 9 (últimos dígitos das matrículas: 7 + 2 + 0)
