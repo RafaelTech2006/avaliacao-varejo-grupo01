@@ -1,6 +1,15 @@
-## 1. Escopo de Utilização da IA
-A IA generativa foi utilizada estritamente como um recurso auxiliar de apoio técnico, revisão e estruturação documental, sem substituir a autoria, a tomada de decisões de engenharia de software ou a validação lógica por parte dos integrantes do grupo.
+# Registro de uso de IA generativa
 
-* **Esclarecimento de Conceitos:** Discussão teórica sobre a complexidade assintótica (Big O) dos algoritmos obrigatórios (Brute Force, Algoritmo Genético e Greedy) e interpretação de métricas de desempenho de caixa e margem.
+O uso de IA generativa neste projeto foi registrado conforme exigido no enunciado (seção 3).
 
-* **Revisão de Sintaxe e Debugging:** Auxílio pontual na identificação de avisos de compilação, tratamento de exceções em Python e verificação de estruturas de dados (como dicionários e arrays NumPy/Pandas).
+## Uso inicial (versão original do grupo)
+- Esclarecimento de conceitos de complexidade assintótica (Big O) e de métricas de caixa/margem.
+- Revisão de sintaxe e depuração pontual (tratamento de exceções, estruturas NumPy/Pandas).
+
+## Revisão técnica assistida por IA (30/10/2026)
+Uma IA (Claude, Anthropic) foi usada para **auditar** a entrega contra o enunciado e **reescrever/corrigir** partes do código:
+- Q2: o código original lia colunas/chaves inexistentes (usava valores padrão no lugar das dívidas, estoques e demanda do grupo), ignorava estoque na validação e o caixa inicial; foi reescrito (`questao_02/`).
+- Q1: chaves de configuração corrigidas, GA vetorizado, Greedy com ganho líquido (o original tinha ganho R$ 0,00), benchmark e testes.
+- Geração de gráficos, benchmarks, testes e rascunho da documentação em `docs/`.
+
+**Responsabilidade do grupo:** os integrantes devem ler, entender e ser capazes de explicar e alterar qualquer trecho (a defesa pode sortear qualquer função). As premissas de modelagem que **não vêm da instância** estão listadas em `docs/decisoes.md` (seção "Premissas próprias") e podem ser alteradas por parâmetro.
