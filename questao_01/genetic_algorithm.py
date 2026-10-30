@@ -1,218 +1,121 @@
-import random
+"""Etapa B — Algoritmo Genético (busca no catálogo completo, validado pelo Brute Force)."""
+from __future__ import annotations
+
 import time
 import tracemalloc
+from dataclasses import dataclass, field
+
 import numpy as np
+
+from questao_01.modelo import ModeloQ1
+
+
+@dataclass
+class ConfigGA:
+    nome: str = "A"
+    tamanho_populacao: int = 50
+    geracoes: int = 100
+    taxa_crossover: float = 0.8
+    taxa_mutacao: float = 0.05      # probabilidade por gene
+    tamanho_torneio: int = 3
+    n_elite: int = 2                # elitismo: melhores indivíduos copiados intactos
+    paciencia: int = 30             # parada antecipada: gerações sem melhora
+    penalidade: float = 1e7         # penalização por gene que viola o piso de margem
+
+
+@dataclass
+class ResultadoGA:
+    idx: np.ndarray
+    fitness: float
+    historico: list = field(default_factory=list)
+    geracao_melhor: int = 0
+    geracoes_executadas: int = 0
+    tempo_s: float = 0.0
+    memoria_pico_mb: float = 0.0
+    avaliacoes: int = 0
 
 
 class AlgoritmoGenetico:
-    """Implementando o Algoritmo Genético para otimização de preços sob restrições
+    """Cromossomo = vetor de índices de nível de preço (um gene por SKU)."""
 
-    de margem mínima e estoque (Operação Caixa 90)[cite: 4, 11].
-    """
-
-    def __init__(
-        self,
-        subconjunto_skus,
-        precos_permitidos,  
-        precificador,
-        avaliador,
-        tamanho_populacao=50,
-        geracoes=100,
-        taxa_crossover=0.8,
-        taxa_mutacao=0.1,
-        tamanho_torneio=3,
-        elitismo=True,
-        seed=9,
-    ):
-        self.subconjunto_skus = subconjunto_skus
-        self.precos_permitidos_dict = precos_permitidos
-        self.precificador = precificador
-        self.avaliador = avaliador
-
-        # Hiperparâmetros do GA
-        self.tamanho_populacao = tamanho_populacao
-        self.geracoes = geracoes
-        self.taxa_crossover = taxa_crossover
-        self.taxa_mutacao = taxa_mutacao
-        self.tamanho_torneio = tamanho_torneio
-        self.elitismo = elitismo
-
-        # Reprodutibilidade baseada em seed
+    def __init__(self, modelo: ModeloQ1, config: ConfigGA, posicoes: np.ndarray | None = None,
+                 seed: int = 0):
+        self.cfg = config
         self.seed = seed
-        random.seed(seed)
-        np.random.seed(seed)
+        self.posicoes = np.arange(modelo.n) if posicoes is None else np.asarray(posicoes)
+        self.n_genes = len(self.posicoes)
+        self.n_niveis = modelo.n_niveis
+        # tabela de fitness (n_genes x L): caixa, com penalização forte onde a margem é violada
+        self.tabela = np.where(modelo.viavel[self.posicoes], modelo.caixa[self.posicoes],
+                               -config.penalidade)
+        self._ar = np.arange(self.n_genes)
 
-        self.skus_ordenados = list(subconjunto_skus["sku"])
-        self.num_genes = len(self.skus_ordenados)
+    def fitness(self, pop: np.ndarray) -> np.ndarray:
+        """Fitness vetorizado da população inteira: O(K*N) por geração."""
+        return self.tabela[self._ar[None, :], pop].sum(axis=1)
 
-    def _gerar_individuo(self):
-        """Um indivíduo é uma lista de preços escolhida dentro das opções permitidas por SKU."""
-        individuo = []
-        for sku in self.skus_ordenados:
-            opcao_preco = random.choice(self.precos_permitidos_dict[sku])
-            individuo.append(opcao_preco)
-        return individuo
-
-    def _gerar_populacao_inicial(self):
-        """Gera a população inicial com o tamanho definido."""
-        return [self._gerar_individuo() for _ in range(self.tamanho_populacao)]
-
-    def calcular_fitness(self, individuo):
-        """Avalia a aptidão do cromossomo aplicando penalização suave baseada na magnitude da violação
-
-        de margem, permitindo a evolução gradual no catálogo completo.
-        """
-        caixa_total = 0.0
-        penalizacao_total = 0.0
-
-        for i, sku in enumerate(self.skus_ordenados):
-            preco_proposto = individuo[i]
-            row = self.subconjunto_skus.iloc[i]
-            
-            # Cálculo dos valores base do SKU
-            var_preco = (preco_proposto - row["preco_atual"]) / row["preco_atual"]
-            var_demanda = -row["elasticidade"] * var_preco
-            demanda_novo = max(0, row["demanda_base_90d"] * (1 + var_demanda))
-            qtd_vendida = min(demanda_novo, row["estoque"])
-
-            receita_liquida = preco_proposto * (1 - row["taxa_marketplace"])
-            custo_total_unitario = row["custo_unitario"] + row["custo_logistico"]
-            caixa_unitario = receita_liquida - custo_total_unitario
-
-            # Margem unitária proposta
-            margem_unitaria = (
-                caixa_unitario / preco_proposto if preco_proposto > 0 else 0
-            )
-
-            caixa_sku = qtd_vendida * caixa_unitario
-
-            # Se violar o piso de margem mínima, aplica penalização proporcional à distância
-            if margem_unitaria < self.precificador.piso_margem_minima:
-                deficit_margem = self.precificador.piso_margem_minima - margem_unitaria
-                penalizacao_total += deficit_margem * abs(caixa_sku) * 10.0
-            else:
-                caixa_total += caixa_sku
-
-        # Fitness final: Caixa acumulado menos as penalizações por violação
-        fitness_final = caixa_total - penalizacao_total
-        return max(fitness_final, -1e9)
-
-    def _selecao_torneio(self, populacao, fitnesses):
-        """Seleção por Torneio estocástico/determinístico."""
-        k = min(self.tamanho_torneio, len(populacao))
-        competidores_idx = random.sample(range(len(populacao)), k)
-        melhor_idx = max(competidores_idx, key=lambda idx: fitnesses[idx])
-        return populacao[melhor_idx]
-
-    def _crossover_ponto_unico(self, pai1, pai2):
-        """Operador de Crossover de ponto único."""
-        if self.num_genes < 2 or random.random() > self.taxa_crossover:
-            return pai1.copy(), pai2.copy()
-
-        ponto = random.randint(1, self.num_genes - 1)
-        filho1 = pai1[:ponto] + pai2[ponto:]
-        filho2 = pai2[:ponto] + pai1[ponto:]
-        return filho1, filho2
-
-    def _mutacao(self, individuo):
-        """Mutação uniforme: altera o preço de um SKU para outra opção válida com probabilidade taxa_mutacao."""
-        individuo_mutado = individuo.copy()
-        for i, sku in enumerate(self.skus_ordenados):
-            if random.random() < self.taxa_mutacao:
-                opcoes = self.precos_permitidos_dict[sku]
-                individuo_mutado[i] = random.choice(opcoes)
-        return individuo_mutado
-
-    def otimizar(self):
-        """Executa a busca estocástica evolutiva e mede desempenho (tempo e memória)[cite: 4, 11]."""
+    def otimizar(self) -> ResultadoGA:
+        c = self.cfg
+        rng = np.random.default_rng(self.seed)
+        K, n, L = c.tamanho_populacao, self.n_genes, self.n_niveis
+        n_elite = min(max(c.n_elite, 0), K)
         tracemalloc.start()
-        tempo_inicio = time.perf_counter()
+        t0 = time.perf_counter()
 
-        populacao = self._gerar_populacao_inicial()
-        historico_fitness = []
+        pop = rng.integers(0, L, size=(K, n))
+        melhor_fit, melhor_ind, ger_melhor, hist, aval = -np.inf, None, 0, [], 0
+        g = 0
+        for g in range(1, c.geracoes + 1):
+            fit = self.fitness(pop)
+            aval += K
+            i_best = int(fit.argmax())
+            if fit[i_best] > melhor_fit + 1e-9:
+                melhor_fit, melhor_ind, ger_melhor = float(fit[i_best]), pop[i_best].copy(), g
+            hist.append({"geracao": g, "melhor_geracao": float(fit[i_best]),
+                         "media": float(fit.mean()), "melhor_global": melhor_fit})
+            if g - ger_melhor >= c.paciencia:          # critério de parada: estagnação
+                break
 
-        melhor_solucao_global = None
-        melhor_fitness_global = -float("inf")
+            elite = pop[np.argsort(-fit)[:n_elite]]
+            n_filhos = K - n_elite
+            n_pares = (n_filhos + 1) // 2
+            # seleção por torneio (vetorizada)
+            cand = rng.integers(0, K, size=(2 * n_pares, min(c.tamanho_torneio, K)))
+            venc = cand[np.arange(2 * n_pares), fit[cand].argmax(axis=1)]
+            p1, p2 = pop[venc[:n_pares]], pop[venc[n_pares:]]
+            # crossover de ponto único
+            if n >= 2:
+                faz = (rng.random(n_pares) < c.taxa_crossover)[:, None]
+                ponto = rng.integers(1, n, size=n_pares)[:, None]
+                pref = self._ar[None, :] < ponto
+                f1 = np.where(faz, np.where(pref, p1, p2), p1)
+                f2 = np.where(faz, np.where(pref, p2, p1), p2)
+            else:
+                f1, f2 = p1, p2
+            filhos = np.vstack([f1, f2])[:n_filhos]
+            # mutação uniforme por gene
+            mut = rng.random(filhos.shape) < c.taxa_mutacao
+            filhos[mut] = rng.integers(0, L, size=int(mut.sum()))
+            pop = np.vstack([elite, filhos]) if n_elite else filhos
 
-        for geracao in range(self.geracoes):
-            # Avaliação de Aptidão
-            fitnesses = [self.calcular_fitness(ind) for ind in populacao]
-
-            # Identificar o melhor da geração atual
-            max_fit_gen = max(fitnesses)
-            idx_melhor_gen = fitnesses.index(max_fit_gen)
-
-            if max_fit_gen > melhor_fitness_global:
-                melhor_fitness_global = max_fit_gen
-                melhor_solucao_global = populacao[idx_melhor_gen].copy()
-
-            historico_fitness.append(
-                {
-                    "geracao": geracao + 1,
-                    "melhor_fitness": max_fit_gen,
-                    "media_fitness": float(np.mean(fitnesses)),
-                }
-            )
-
-            # Construção da Nova Geração
-            nova_populacao = []
-
-            # Preservação via Elitismo
-            if self.elitismo and melhor_solucao_global is not None:
-                nova_populacao.append(melhor_solucao_global.copy())
-
-            # Reprodução (Crossover e Mutação)
-            while len(nova_populacao) < self.tamanho_populacao:
-                pai1 = self._selecao_torneio(populacao, fitnesses)
-                pai2 = self._selecao_torneio(populacao, fitnesses)
-
-                filho1, filho2 = self._crossover_ponto_unico(pai1, pai2)
-
-                filho1 = self._mutacao(filho1)
-                filho2 = self._mutacao(filho2)
-
-                nova_populacao.append(filho1)
-                if len(nova_populacao) < self.tamanho_populacao:
-                    nova_populacao.append(filho2)
-
-            populacao = nova_populacao
-
-        tempo_fim = time.perf_counter()
-        _, memoria_pico = tracemalloc.get_traced_memory()
+        tempo = time.perf_counter() - t0
+        _, pico = tracemalloc.get_traced_memory()
         tracemalloc.stop()
-
-        # Recalcula estritamente o caixa real viável gerado pela melhor solução encontrada
-        caixa_real_otimo = 0.0
-        for i, sku in enumerate(self.skus_ordenados):
-            preco = melhor_solucao_global[i]
-            row = self.subconjunto_skus.iloc[i]
-            
-            var_preco = (preco - row["preco_atual"]) / row["preco_atual"]
-            var_demanda = -row["elasticidade"] * var_preco
-            demanda_novo = max(0, row["demanda_base_90d"] * (1 + var_demanda))
-            qtd_vendida = min(demanda_novo, row["estoque"])
-            
-            receita_liquida = preco * (1 - row["taxa_marketplace"])
-            custo_total_unitario = row["custo_unitario"] + row["custo_logistico"]
-            caixa_unitario = receita_liquida - custo_total_unitario
-            margem_unitaria = caixa_unitario / preco if preco > 0 else 0
-            
-            if margem_unitaria >= self.precificador.piso_margem_minima:
-                caixa_real_otimo += qtd_vendida * caixa_unitario
-
-        metricas = {
-            "tempo_execucao": tempo_fim - tempo_inicio,
-            "memoria_pico_mb": memoria_pico / (1024 * 1024),
-            "historico": historico_fitness,
-        }
-
-        return melhor_solucao_global, caixa_real_otimo, metricas
+        return ResultadoGA(idx=melhor_ind, fitness=melhor_fit, historico=hist,
+                           geracao_melhor=ger_melhor, geracoes_executadas=g, tempo_s=tempo,
+                           memoria_pico_mb=pico / 2**20, avaliacoes=aval)
 
 
-def calcular_gap_percentual(caixa_bf, caixa_ga):
-    """Calcula o Gap Percentual em relação ao benchmark ótimo do Brute Force[cite: 4, 11]."""
-    if caixa_bf == -float("inf") and caixa_ga == -float("inf"):
-        return 0.0  
-    if caixa_bf == -float("inf") or caixa_bf == 0:
+def gap_percentual(otimo: float, obtido: float) -> float | None:
+    """Gap (%) do GA em relação ao ótimo do Brute Force."""
+    if not np.isfinite(otimo) or otimo == 0:
         return None
-    return ((caixa_bf - caixa_ga) / abs(caixa_bf)) * 100
+    return float((otimo - obtido) / abs(otimo) * 100.0)
+
+
+def otimo_separavel(modelo: ModeloQ1) -> np.ndarray:
+    """Sem incentivos, o problema é separável por SKU: o argmax por linha é o ótimo exato.
+
+    Serve como limite de referência para o GA no catálogo completo (onde o Brute Force é inviável).
+    """
+    return np.where(modelo.viavel, modelo.caixa, -np.inf).argmax(axis=1)
