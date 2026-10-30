@@ -1,131 +1,110 @@
 import argparse
 import json
-from pathlib import Path
-import time
-import tracemalloc
+import pandas as pd
+from brute_force import PrecificadorSKU, BruteForce, LeitorCsv, AvaliadorMeta
+from genetic_algorithm import AlgoritmoGenetico, calcular_gap_percentual
 
-# Importação das classes modulares do brute_force.py
-from brute_force import AvaliadorMeta, BruteForce, LeitorCsv, PrecificadorSKU
+
+def carregar_dados(caminho_catalogo, caminho_config):
+    catalogo = pd.read_csv(caminho_catalogo)
+    with open(caminho_config, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+    return catalogo, config
 
 
 def main():
-    # 1. Suporte a CLI com argumento de seed para reprodutibilidade (Edital Seção 6)
-    parser = argparse.ArgumentParser(
-        description="Operação Caixa 90 - Questão 1 (Etapa A: Brute Force Benchmark)"
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=9,
-        help="Seed determinística para a amostragem dos SKUs",
-    )
+    parser = argparse.ArgumentParser(description="Execução da Questão 1 - Operação Caixa 90")
+    parser.add_argument("--seed", type=int, default=14, help="Seed base/final da instância")
+    parser.add_argument("--modo", type=str, default="completo", choices=["subconjunto", "completo"], help="Modo de execução")
     args = parser.parse_args()
 
-    print("=" * 68)
-    print("   OPERAÇÃO CAIXA 90 - QUESTÃO 1 (ETAPA A: BRUTE FORCE BENCHMARK)")
-    print("=" * 68)
+    print(f"\n=======================================================================================")
+    print(f"       OPERAÇÃO CAIXA 90 - QUESTÃO 1 (INTEGRAÇÃO BRUTE FORCE E GENETIC ALGORITHM)        ")
+    print(f"==========================================================================================\n")
 
-    # 2. Localização e validação dos ficheiros oficiais da instância (data/)
-    diretorio_atual = Path(__file__).parent
-    diretorio_raiz = diretorio_atual.parent
-
-    caminho_csv = diretorio_raiz / "data" / "q1_catalogo_G01.csv"
-    caminho_config = diretorio_raiz / "data" / "q1_config_G01.json"
-
-    # Fallbacks de caminho caso os dados estejam na mesma pasta da questão
-    if not caminho_csv.exists():
-        caminho_csv = diretorio_atual / "q1_catalogo_G01.csv"
-    if not caminho_config.exists():
-        caminho_config = diretorio_atual / "q1_config_G01.json"
-
-    if not caminho_csv.exists() or not caminho_config.exists():
-        print("❌ ERRO CRÍTICO: Ficheiros oficiais de entrada não encontrados em /data.")
-        print(f"   • Verifique se '{caminho_csv.name}' e '{caminho_config.name}' existem.")
+    # Caminhos oficiais gerados pelo notebook
+    caminho_catalogo = "data/q1_catalogo_G01.csv"
+    caminho_config = "data/q1_config_G01.json"
+    
+    try:
+        catalogo, config = carregar_dados(caminho_catalogo, caminho_config)
+    except FileNotFoundError:
+        print(f"[!] Erro: Ficheiros de dados não encontrados em 'data/'. Certifica-te de que os caminhos estão corretos.")
         return
+    
+    meta_caixa = config.get("meta_caixa_90d", 331680.98)
+    piso_margem = config.get("piso_margem_minima", 0.0831)
+    multiplicadores = config.get("multiplicadores_seed", [0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1])
 
-    # 3. Leitura dinâmica da configuração oficial da seed do grupo (Edital Seção 2.3)
-    with open(caminho_config, "r", encoding="utf-8") as f:
-        config_oficial = json.load(f)
+    print(f"[+] Instância Carregada com Sucesso!")
+    print(f" • Meta de Caixa (90d) : R$ {meta_caixa:,.2f}")
+    print(f" • Piso de Margem Mín. : {piso_margem * 100:.2f}%")
 
-    multiplicadores_preco = config_oficial["niveis_preco_relativos"]
-    piso_margem_oficial = config_oficial["margem_minima_percentual"]
-    meta_caixa_oficial = config_oficial["meta_caixa_90d"]
-
-    print(f"\n[+] Instância Carregada para o Grupo {config_oficial.get('grupo', 'G01')}:")
-    print(f"    • Meta de Caixa (90d) : R$ {meta_caixa_oficial:,.2f}")
-    print(f"    • Piso de Margem Mín. : {piso_margem_oficial * 100:.2f}%")
-    print(f"    • Multiplicadores Seed : {multiplicadores_preco}")
-
-    # 4. Início da medição de desempenho (Tempo e Memória)
-    tracemalloc.start()
-    tempo_inicio = time.perf_counter()
-
-    # 5. Amostragem determinística dos 6 SKUs usando a Seed
-    print(f"\n[+] A carregar o catálogo e a selecionar 6 SKUs (Seed: {args.seed})...")
-    leitor = LeitorCsv(str(caminho_csv))
-    subconjunto_6_skus = leitor.leitura(seed=args.seed)
-
-    # 6. Construção do dicionário de preços permitidos discretos
+    # Dicionário de preços permitidos por SKU baseado nos multiplicadores oficiais
     precos_permitidos_dict = {}
-    for _, row in subconjunto_6_skus.iterrows():
+    for _, row in catalogo.iterrows():
         sku = row["sku"]
-        preco_atual = row["preco_atual"]
-        precos_permitidos_dict[sku] = [
-            round(preco_atual * m, 2) for m in multiplicadores_preco
-        ]
+        preco_ref = row["preco_atual"]
+        precos_permitidos_dict[sku] = [round(preco_ref * m, 2) for m in multiplicadores]
 
-    # 7. Otimização via Busca Exaustiva (Brute Force)
-    precificador = PrecificadorSKU(piso_margem_minimo=piso_margem_oficial)
-    otimizador_bf = BruteForce(precificador)
-    avaliador = AvaliadorMeta(meta_caixa=meta_caixa_oficial)
+    # Instanciação dos componentes da Etapa A
+    precificador_instancia = PrecificadorSKU(piso_margem_minimo=piso_margem)
+    avaliador_meta = AvaliadorMeta(meta_caixa=meta_caixa)
 
-    total_combinacoes = len(multiplicadores_preco) ** len(subconjunto_6_skus)
-    print(f"[+] A testar exaustivamente todas as {total_combinacoes:,} combinações via Brute Force...")
-
-    melhor_combinacao, melhor_caixa = otimizador_bf.testeCombinacoes(
-        subconjunto_6_skus, precos_permitidos_dict
+    # --- 1. SELEÇÃO DO SUBCONJUNTO REDUZIDO (6 SKUs para Validação com Brute Force) ---
+    # Usando a mesma lógica do LeitorCsv ou pegando os 6 primeiros
+    leitor = LeitorCsv(caminho_catalogo)
+    subconjunto_6 = leitor.leitura(seed=args.seed)
+    
+    print(f"\n--- A EXECUTAR ALGORITMO GENÉTICO NO SUBCONJUNTO (6 SKUs) ---")
+    
+    ga_subconjunto = AlgoritmoGenetico(
+        subconjunto_skus=subconjunto_6,
+        precos_permitidos=precos_permitidos_dict,
+        precificador=precificador_instancia,
+        avaliador=avaliador_meta,
+        tamanho_populacao=30,
+        geracoes=50,
+        seed=args.seed
     )
 
-    # Coleta de métricas computacionais (Performance)
-    tempo_fim = time.perf_counter()
-    _, memoria_pico = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
+    melhor_sol_sub, fitness_sub, metricas_sub = ga_subconjunto.otimizar()
+    print(f" • Melhor Fitness (Caixa) Obtido pelo GA no Subconjunto: R$ {fitness_sub:,.2f}")
+    print(f" • Tempo de Execução GA (Subconjunto): {metricas_sub['tempo_execucao']:.4f} segundos")
+    print(f" • Pico de Memória GA (Subconjunto): {metricas_sub['memoria_pico_mb']:.4f} MB")
 
-    # 8. Apresentação dos Resultados
-    print("\n" + "=" * 68)
-    print("--- 1. SUBSET DE SKUs SELECIONADO (6 SKUs) ---")
-    print(
-        subconjunto_6_skus[
-            ["sku", "categoria", "preco_atual", "estoque", "elasticidade"]
-        ].to_string(index=False)
-    )
+    
+    brute_force_instancia = BruteForce(precificador=precificador_instancia)
+    melhor_comb_bf, caixa_bf = brute_force_instancia.testeCombinacoes(subconjunto_6, precos_permitidos_dict)
+    
+    print(f" • Caixa Ótimo Brute Force (Benchmark): {'R$ {:,.2f}'.format(caixa_bf) if caixa_bf != -float('inf') else 'Inviável (-inf)'}")
 
-    print("\n--- 2. BENCHMARK ÓTIMO ENCONTRADO (BRUTE FORCE) ---")
-    if melhor_combinacao is None or melhor_caixa == -float("inf"):
-        print("⚠️ AVISO: Nenhuma combinação de preços atendeu ao piso de margem mínima para todos os SKUs em simultâneo.")
-        print("   Todas as combinações foram consideradas inviáveis segundo as travas de segurança.")
-    else:
-        for i, sku in enumerate(subconjunto_6_skus["sku"]):
-            preco_orig = subconjunto_6_skus.iloc[i]["preco_atual"]
-            preco_otimo = melhor_combinacao[i]
-            var_perc = ((preco_otimo - preco_orig) / preco_orig) * 100
-            print(
-                f"  • SKU {sku:10s} | Preço Atual: R$ {preco_orig:>8.2f} | Preço Ótimo: R$ {preco_otimo:>8.2f} ({var_perc:+5.1f}%)"
-            )
+    # Cálculo do Gap Percentual exigido pelo edital
+    gap = calcular_gap_percentual(caixa_bf, fitness_sub)
+    print(f" • Gap Percentual em relação ao Brute Force: {f'{gap:.2f}%' if gap is not None else 'N/A'}")
 
-        # 9. Avaliação financeira perante a meta
-        relatorio = avaliador.avaliar(melhor_caixa)
-        print("\n--- 3. AVALIAÇÃO DA META FINANCEIRA ---")
-        print(f"  • Caixa Total Gerado  : R$ {relatorio['caixa_gerado']:>14,.2f}")
-        print(f"  • Meta de Caixa (90d) : R$ {relatorio['meta_caixa']:>14,.2f}")
-        print(f"  • Diferença / Folga   : R$ {relatorio['diferenca']:>14,.2f}")
-        print(f"  • Status Final        : {relatorio['status']}")
+    if args.modo == "completo":
+        print(f"\n--- A EXECUTAR ALGORITMO GENÉTICO NO CATÁLOGO COMPLETO ---")
+        ga_completo = AlgoritmoGenetico(
+            subconjunto_skus=catalogo,
+            precos_permitidos=precos_permitidos_dict,
+            precificador=precificador_instancia,
+            avaliador=avaliador_meta,
+            tamanho_populacao=50,
+            geracoes=100,
+            seed=args.seed
+        )
 
-    print("\n--- 4. EVIDÊNCIAS COMPUTAÇÃO (BIG O & DESEMPENHO) ---")
-    print(f"  • Tempo de Execução   : {tempo_fim - tempo_inicio:.4f} segundos")
-    print(f"  • Pico de Memória     : {memoria_pico / (1024 * 1024):.4f} MB")
-    print(f"  • Combinações Lidas   : {total_combinacoes:,} cenários")
-    print("=" * 68 + "\n")
+        melhor_sol_comp, fitness_comp, metricas_comp = ga_completo.otimizar()
+        
+        # Avaliação final da meta de caixa
+        status_meta = avaliador_meta.avaliar(fitness_comp)
+        
+        print(f" • Melhor Caixa Gerado (Catálogo Completo): R$ {fitness_comp:,.2f}")
+        print(f" • Status da Meta : {status_meta['status']} (Diferença: R$ {status_meta['diferenca']:,.2f})")
+        print(f" • Tempo de Execução (Completo): {metricas_comp['tempo_execucao']:.4f} segundos")
+        print(f" • Pico de Memória (Completo): {metricas_comp['memoria_pico_mb']:.4f} MB")
+        print(f"\n====================================================================\n")
 
 
 if __name__ == "__main__":
