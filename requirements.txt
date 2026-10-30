@@ -1,0 +1,9 @@
+Este projeto conta com as seguintes bibliotecas:
+
+QUESTÃO 1:
+- itertools
+- pandas
+- random
+- time
+- tracemaloc
+- numpy
