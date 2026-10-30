@@ -1,0 +1,35 @@
+========================================================================
+ QUESTÃO 1 — OPERAÇÃO CAIXA 90   (grupo G01, seed 1009)
+========================================================================
+Integridade dos dados (SHA-256): OK
+SKUs: 30 (ativos: 26) | níveis de preço: [0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1]
+Meta de caixa: R$ 331,680.98 | Dívida 90d: R$ 307,568.20 | Orçamento incentivos: R$ 89,164.18 | Piso de margem: 8.31%
+[aviso] SKUs sem preço viável (não vendem): ['Q1-017', 'Q1-024', 'Q1-027', 'Q1-029']
+
+--- ETAPA A: BRUTE FORCE (6 SKUs: ['Q1-002', 'Q1-007', 'Q1-008', 'Q1-014', 'Q1-016', 'Q1-030']) ---
+Combinações avaliadas: 343 | caixa ótimo: R$ 92,153.65 | tempo 0.004s | memória 0.001 MB
+
+--- ETAPA B (validação): GA NO MESMO SUBCONJUNTO ---
+Caixa GA: R$ 92,153.65 | gap vs Brute Force: 0.0000% | melhor na geração 12/42 | 0.0131s
+
+--- ETAPA B: GA NO CATÁLOGO COMPLETO (comparação de configurações) ---
+Config A: pop=50 ger<=100 mut=0.05 -> caixa R$ 466,012.29 | melhor na ger. 92 (de 100) | 0.033s | 0.091 MB
+Config B: pop=100 ger<=200 mut=0.025 -> caixa R$ 466,047.37 | melhor na ger. 71 (de 131) | 0.046s | 0.162 MB
+Política escolhida: config B. Ótimo exato (separável): R$ 466,047.37 -> gap do GA: 0.0000%
+
+--- ETAPA C: GREEDY (incentivos) SOBRE A POLÍTICA DO GA ---
+Orçamento usado: R$ 20,134.06 de R$ 89,164.18 (22.6%) | SKUs beneficiados: 15
+Caixa antes do Greedy: R$ 466,047.37 -> depois (líquido de incentivos): R$ 481,154.85 (ganho R$ 15,107.48)
+Tempo 0.0017s | memória 0.0113 MB
+
+=== RESULTADO FINAL ===
+Caixa gerado (líquido)    : R$ 481,154.85
+Meta de caixa             : R$ 331,680.98 -> META ATINGIDA (folga): R$ 149,473.87
+Margem global             : 21.48%  (piso unitário 8.31%)
+Estoque remanescente      : 1,035 un (25.0%) 
+Cobertura da dívida (90d) : 1.56x  (dívida R$ 307,568.20)
+Uso do orçamento promo    : 22.6%
+
+Otimização do fitness: antes 0.650s -> depois 0.00184s (353x) para 300 avaliações
+
+Arquivos gravados em /home/claude/proj/avaliacao-varejo-grupo01/questao_01/resultados

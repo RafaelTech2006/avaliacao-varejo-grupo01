@@ -1,0 +1,116 @@
+{
+  "grupo": "G01",
+  "seed": 1009,
+  "integridade_ok": true,
+  "parametros": {
+    "meta": 331680.98,
+    "divida": 307568.2,
+    "orcamento": 89164.18,
+    "piso_margem": 0.0831,
+    "niveis": [
+      0.8,
+      0.85,
+      0.9,
+      0.95,
+      1.0,
+      1.05,
+      1.1
+    ],
+    "cenario": {
+      "meta_mult": 1.0,
+      "orcamento_mult": 1.0,
+      "custo_log_mult": 1.0,
+      "divida_mult": 1.0,
+      "remover_sku": []
+    }
+  },
+  "brute_force_vs_ga": {
+    "skus": [
+      "Q1-002",
+      "Q1-007",
+      "Q1-008",
+      "Q1-014",
+      "Q1-016",
+      "Q1-030"
+    ],
+    "caixa_bf": 92153.65059344521,
+    "caixa_ga": 92153.65059344521,
+    "gap_pct": 0.0,
+    "politica_bf": [
+      6,
+      6,
+      6,
+      4,
+      6,
+      6
+    ],
+    "politica_ga": [
+      6,
+      6,
+      6,
+      4,
+      6,
+      6
+    ]
+  },
+  "ga_completo": {
+    "configs": [
+      {
+        "config": "A",
+        "populacao": 50,
+        "geracoes_max": 100,
+        "mutacao": 0.05,
+        "geracao_melhor": 92,
+        "geracoes_executadas": 100,
+        "caixa": 466012.2941335699,
+        "tempo_s": 0.03310338099998944,
+        "memoria_mb": 0.0905609130859375
+      },
+      {
+        "config": "B",
+        "populacao": 100,
+        "geracoes_max": 200,
+        "mutacao": 0.025,
+        "geracao_melhor": 71,
+        "geracoes_executadas": 131,
+        "caixa": 466047.3731937554,
+        "tempo_s": 0.04576294600002484,
+        "memoria_mb": 0.1622915267944336
+      }
+    ],
+    "config_escolhida": "B",
+    "caixa_ga": 466047.3731937554,
+    "caixa_otimo_exato_separavel": 466047.3731937554,
+    "gap_vs_exato_pct": 0.0
+  },
+  "greedy": {
+    "orcamento": 89164.18,
+    "orcamento_usado": 20134.06085872486,
+    "orcamento_restante": 69030.11914127515,
+    "ganho_liquido_total": 15107.479070501111,
+    "skus_beneficiados": 15,
+    "tempo_s": 0.0016863719999946625,
+    "memoria_pico_mb": 0.011316299438476562
+  },
+  "resultado_final": {
+    "caixa_antes_greedy": 466047.3731937554,
+    "caixa_liquido_final": 481154.8522642565,
+    "meta": 331680.98,
+    "folga_ou_insuficiencia": 149473.87226425653,
+    "meta_atingida": true,
+    "margem_global": 0.21475139302749888,
+    "estoque_remanescente": 1034.7735080000002,
+    "estoque_remanescente_pct": 0.24994529178743966,
+    "cobertura_divida": 1.5643842642518195,
+    "uso_orcamento_pct": 0.22580884901004936,
+    "status_antes_greedy": "META ATINGIDA (folga)",
+    "status_final": "META ATINGIDA (folga)"
+  },
+  "otimizacao_codigo": {
+    "avaliacoes": 300,
+    "tempo_antes_s": 0.6498045920000095,
+    "tempo_depois_s": 0.0018410019999919314,
+    "speedup": 352.9624584888324,
+    "resultados_iguais": true
+  }
+}

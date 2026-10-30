@@ -1,0 +1,32 @@
+========================================================================
+ QUESTÃO 2 — PLANO DE SOBREVIVÊNCIA EM 12 SEMANAS  (grupo G01, seed 1009)
+========================================================================
+Integridade dos dados (SHA-256): OK
+SKUs: 24 | níveis de preço: [0.82, 0.88, 0.94, 1.0, 1.06, 1.12] | caixa inicial R$ 24,168.04
+Dívidas: semana 4: R$ 54,546.73 | semana 8: R$ 70,456.20 | semana 12: R$ 102,275.12 | orçamento promo semanal R$ 6,928.92
+Variabilidade: demanda 0.0921 | concorrente 0.0435 | logística 0.1453
+
+[1] Monte Carlo (estimação): 2000 cenários -> pmf de vendas por (semana, SKU, preço).
+[2] Programação Dinâmica: 32,316 subproblemas (semana,estoque) resolvidos 1x cada; 41,581,944 transições avaliadas (sem memoização: 2,176,782,336 trajetórias/SKU).
+[3] Greedy: 68 destaques concedidos (gasto total R$ 13,326.13; orçamento total R$ 83,147.04).
+[4] Monte Carlo (validação): 5000 cenários independentes (seed 11009).
+
+=== PROBABILIDADE DE PAGAR NO PRAZO (validação) ===
+  Política fixa (preço 1,0)  S4: 100.0% | S8: 100.0% | S12: 99.9% | todas: 99.9% | caixa final médio R$ 77,769.83
+  DP (sem destaques)         S4: 100.0% | S8: 100.0% | S12: 100.0% | todas: 100.0% | caixa final médio R$ 236,724.34
+  DP + Greedy (plano final)  S4: 100.0% | S8: 100.0% | S12: 100.0% | todas: 100.0% | caixa final médio R$ 238,091.76
+
+=== PLANO FINAL ===
+Caixa final esperado (após todas as dívidas): R$ 238,091.76
+Percentil de risco escolhido P10: R$ 169,851.62  (P5 R$ 142,314.22 | P50 R$ 248,229.57 | P95 R$ 298,509.82)
+Margem média: 19.93% | Estoque final médio: 460 un (17.2% do inicial)
+Cenários de falha (qualquer dívida): 1 de 5000 | por semana: {4: 0, 8: 0, 12: 1}
+Critério de risco da instância (falha <= 10% em cada vencimento): ATENDIDO
+
+Desempenho por etapa:
+  monte_carlo_estimacao      0.179s | 33.57 MB
+  programacao_dinamica       0.323s | 30.66 MB
+  greedy                     0.017s | 0.02 MB
+  monte_carlo_validacao      0.169s | 20.04 MB
+
+Arquivos gravados em /home/claude/proj/avaliacao-varejo-grupo01/questao_02/resultados

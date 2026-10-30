@@ -1,0 +1,141 @@
+{
+  "grupo": "G01",
+  "seed": 1009,
+  "seed_validacao": 11009,
+  "integridade_ok": true,
+  "cenarios_estimacao": 2000,
+  "cenarios_validacao": 5000,
+  "parametros": {
+    "lambda_risco": 0.5,
+    "beta_urgencia": 0.1,
+    "uplift": 0.2,
+    "custo_destaque_pct": 0.05,
+    "percentil_risco": 10.0,
+    "dividas": {
+      "4": 54546.73,
+      "8": 70456.2,
+      "12": 102275.12
+    },
+    "cenario": {
+      "divida_mult": 1.0,
+      "concorrente_delta": 0.0,
+      "custo_log_mult": 1.0,
+      "orcamento_mult": 1.0,
+      "sigma_mult": 1.0,
+      "remover_sku": []
+    }
+  },
+  "dp": {
+    "valor": 486940.3351630212,
+    "subproblemas": 32316,
+    "transicoes": 41581944,
+    "trajetorias_sem_memo_por_sku": 2176782336
+  },
+  "greedy": {
+    "destaques": 68,
+    "gasto": 13326.1321
+  },
+  "desempenho": {
+    "monte_carlo_estimacao": {
+      "tempo_s": 0.1791241749999699,
+      "memoria_pico_mb": 33.57211780548096
+    },
+    "programacao_dinamica": {
+      "tempo_s": 0.32332892299996274,
+      "memoria_pico_mb": 30.659263610839844
+    },
+    "greedy": {
+      "tempo_s": 0.017322202000002562,
+      "memoria_pico_mb": 0.01763153076171875
+    },
+    "monte_carlo_validacao": {
+      "tempo_s": 0.1686088179999956,
+      "memoria_pico_mb": 20.03567409515381
+    }
+  },
+  "validacao": {
+    "fixa_1.0": {
+      "n_cenarios": 5000,
+      "seed": 11009,
+      "prob_pagamento": {
+        "4": 1.0,
+        "8": 1.0,
+        "12": 0.9994
+      },
+      "prob_todas": 0.9994,
+      "cenarios_falha_qualquer": 3,
+      "cenarios_falha_por_semana": {
+        "4": 0,
+        "8": 0,
+        "12": 3
+      },
+      "caixa_final_medio": 77769.82543712534,
+      "caixa_final_p5": 47014.04311866143,
+      "caixa_final_p10": 54327.613344694866,
+      "caixa_final_p50": 79369.32460787901,
+      "caixa_final_p95": 104525.42445989694,
+      "caixa_gerado_medio": 280879.83543712535,
+      "custo_destaques": 0.0,
+      "margem_media": 0.13319252867231743,
+      "receita_media": 2108825.7595,
+      "estoque_final_medio_un": 514.887,
+      "estoque_final_pct": 0.19291382540277255
+    },
+    "dp_sem_destaques": {
+      "n_cenarios": 5000,
+      "seed": 11009,
+      "prob_pagamento": {
+        "4": 1.0,
+        "8": 1.0,
+        "12": 0.9998
+      },
+      "prob_todas": 0.9998,
+      "cenarios_falha_qualquer": 1,
+      "cenarios_falha_por_semana": {
+        "4": 0,
+        "8": 0,
+        "12": 1
+      },
+      "caixa_final_medio": 236724.33873509578,
+      "caixa_final_p5": 143905.57194074563,
+      "caixa_final_p10": 170680.8581166753,
+      "caixa_final_p50": 246582.84528177878,
+      "caixa_final_p95": 297283.3781377396,
+      "caixa_gerado_medio": 439834.34873509576,
+      "custo_destaques": 0.0,
+      "margem_media": 0.2026562046819576,
+      "receita_media": 2170347.3102408005,
+      "estoque_final_medio_un": 599.6824,
+      "estoque_final_pct": 0.22468430123641814
+    },
+    "dp_mais_greedy": {
+      "n_cenarios": 5000,
+      "seed": 11009,
+      "prob_pagamento": {
+        "4": 1.0,
+        "8": 1.0,
+        "12": 0.9998
+      },
+      "prob_todas": 0.9998,
+      "cenarios_falha_qualquer": 1,
+      "cenarios_falha_por_semana": {
+        "4": 0,
+        "8": 0,
+        "12": 1
+      },
+      "caixa_final_medio": 238091.75878734203,
+      "caixa_final_p5": 142314.221307037,
+      "caixa_final_p10": 169851.6188877645,
+      "caixa_final_p50": 248229.5660177806,
+      "caixa_final_p95": 298509.81689224334,
+      "caixa_gerado_medio": 441201.76878734207,
+      "custo_destaques": 13326.132099999997,
+      "margem_media": 0.1992550284232733,
+      "receita_media": 2214256.6352208005,
+      "estoque_final_medio_un": 459.8454,
+      "estoque_final_pct": 0.1722912701386287
+    }
+  },
+  "percentil_risco_valor": 169851.6188877645,
+  "criterio_risco_atendido": true
+}
