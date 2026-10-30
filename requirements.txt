@@ -1,3 +1,6 @@
-pandas
-numpy
-pytest
+# Testado com Python 3.12.3
+numpy>=2.0
+pandas>=2.2
+matplotlib>=3.8
+pytest>=8.0
+tabulate>=0.9   # apenas para gerar as tabelas .md dos benchmarks
